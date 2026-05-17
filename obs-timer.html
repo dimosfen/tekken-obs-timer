@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBS Timer</title>
+  <style>
+    :root {
+      --bg: #0b0f1f;
+      --panel: rgba(13, 22, 48, 0.88);
+      --line: rgba(130, 178, 255, 0.42);
+      --text: #f0f5ff;
+      --muted: #a9b8d8;
+      --accent: #ff3f1f;
+      --accent-2: #2fb4ff;
+      --danger: #ff5f6d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+    }
+
+    body {
+      background: radial-gradient(circle at 20% 15%, #1d2450 0%, transparent 40%),
+        radial-gradient(circle at 90% 10%, #451010 0%, transparent 35%),
+        var(--bg);
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+
+    .app {
+      width: min(520px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(6px);
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: 1.2rem;
+      letter-spacing: 0.03em;
+      color: var(--muted);
+    }
+
+    .timer {
+      text-align: center;
+      font-size: clamp(3rem, 13vw, 5.4rem);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      margin: 8px 0 16px;
+      text-shadow: 0 0 20px rgba(47, 180, 255, 0.24);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer.finished {
+      color: #fff2f2;
+      text-shadow: 0 0 24px rgba(255, 95, 109, 0.55);
+      animation: pulse 0.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+      100% { transform: scale(1); }
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid rgba(167, 198, 255, 0.28);
+      background: rgba(10, 16, 34, 0.9);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(92, 169, 255, 0.72);
+      box-shadow: 0 0 0 2px rgba(92, 169, 255, 0.2);
+    }
+
+    .btns {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 1px solid rgba(170, 207, 255, 0.28);
+      background: linear-gradient(180deg, rgba(54, 95, 168, 0.5), rgba(28, 41, 76, 0.8));
+      color: var(--text);
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 10px 8px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(180, 223, 255, 0.62);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    button.accent {
+      background: linear-gradient(180deg, rgba(255, 86, 52, 0.65), rgba(136, 35, 19, 0.88));
+      border-color: rgba(255, 140, 115, 0.65);
+    }
+
+    button.ghost {
+      background: rgba(20, 31, 56, 0.66);
+    }
+
+    .meta {
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .overlay body,
+    body.overlay {
+      background: transparent;
+      padding: 0;
+    }
+
+    body.overlay .app {
+      width: auto;
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+      backdrop-filter: none;
+      padding: 0;
+    }
+
+    body.overlay h1,
+    body.overlay .row,
+    body.overlay .btns,
+    body.overlay .meta {
+      display: none;
+    }
+
+    body.overlay .timer {
+      margin: 0;
+      font-size: clamp(2rem, 18vw, 9rem);
+      text-shadow: 0 0 22px rgba(0, 0, 0, 0.7), 0 0 20px rgba(47, 180, 255, 0.48);
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1 id="title">Локальный таймер для OBS</h1>
+    <div class="timer" id="timerDisplay">00:05:00</div>
+
+    <div class="row">
+      <div>
+        <label for="hoursInput">Часы</label>
+        <input id="hoursInput" type="number" min="0" max="999" value="0">
+      </div>
+      <div>
+        <label for="minutesInput">Минуты</label>
+        <input id="minutesInput" type="number" min="0" max="59" value="5">
+      </div>
+      <div>
+        <label for="secondsInput">Секунды</label>
+        <input id="secondsInput" type="number" min="0" max="59" value="0">
+      </div>
+    </div>
+
+    <div class="btns">
+      <button class="accent" id="setBtn" type="button">Выставить</button>
+      <button id="startPauseBtn" type="button">Старт</button>
+      <button class="ghost" id="resetBtn" type="button">Сброс</button>
+      <button class="ghost" id="minus10Btn" type="button">-10 сек</button>
+      <button class="ghost" id="plus10Btn" type="button">+10 сек</button>
+      <button class="ghost" id="restartBtn" type="button">Рестарт</button>
+    </div>
+
+    <p class="meta">
+      Параметры URL: <code>?hours=2&minutes=30&seconds=0&autostart=1&overlay=1</code><br>
+      Для OBS overlay: включи <code>overlay=1</code>, чтобы показать только цифры.
+    </p>
+  </main>
+
+  <script>
+    const display = document.getElementById("timerDisplay");
+    const hoursInput = document.getElementById("hoursInput");
+    const minutesInput = document.getElementById("minutesInput");
+    const secondsInput = document.getElementById("secondsInput");
+    const startPauseBtn = document.getElementById("startPauseBtn");
+    const setBtn = document.getElementById("setBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const minus10Btn = document.getElementById("minus10Btn");
+    const plus10Btn = document.getElementById("plus10Btn");
+    const restartBtn = document.getElementById("restartBtn");
+    const titleEl = document.getElementById("title");
+
+    const params = new URLSearchParams(window.location.search);
+    const overlayMode = params.get("overlay") === "1";
+    if (overlayMode) {
+      document.body.classList.add("overlay");
+    }
+
+    const customTitle = params.get("title");
+    if (customTitle) {
+      titleEl.textContent = customTitle;
+      document.title = customTitle;
+    }
+
+    function toInt(value, fallback = 0) {
+      const parsed = Number.parseInt(value, 10);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    const startHours = Math.max(0, toInt(params.get("hours"), 0));
+    const startMinutes = Math.min(59, Math.max(0, toInt(params.get("minutes"), 5)));
+    const startSeconds = Math.min(59, Math.max(0, toInt(params.get("seconds"), 0)));
+
+    let initialSeconds = startHours * 3600 + startMinutes * 60 + startSeconds;
+    let remainingSeconds = initialSeconds;
+    let isRunning = false;
+    let intervalId = null;
+    let finishedBeepPlayed = false;
+
+    hoursInput.value = Math.floor(initialSeconds / 3600);
+    minutesInput.value = Math.floor((initialSeconds % 3600) / 60);
+    secondsInput.value = initialSeconds % 60;
+
+    function formatTime(total) {
+      const hours = Math.floor(total / 3600);
+      const mins = Math.floor((total % 3600) / 60);
+      const secs = total % 60;
+      return String(hours).padStart(2, "0") + ":" + String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+    }
+
+    function render() {
+      display.textContent = formatTime(remainingSeconds);
+      startPauseBtn.textContent = isRunning ? "Пауза" : "Старт";
+      display.classList.toggle("finished", remainingSeconds === 0 && !isRunning);
+    }
+
+    function beep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.value = 880;
+        gainNode.gain.value = 0.08;
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        setTimeout(() => {
+          oscillator.stop();
+          audioCtx.close();
+        }, 180);
+      } catch (error) {
+        // Ignore audio failures in restricted environments.
+      }
+    }
+
+    function stopTimer() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      isRunning = false;
+      render();
+    }
+
+    function startTimer() {
+      if (isRunning || remainingSeconds <= 0) {
+        return;
+      }
+      isRunning = true;
+      render();
+      intervalId = setInterval(() => {
+        remainingSeconds -= 1;
+        if (remainingSeconds <= 0) {
+          remainingSeconds = 0;
+          stopTimer();
+          if (!finishedBeepPlayed) {
+            beep();
+            finishedBeepPlayed = true;
+          }
+        }
+        render();
+      }, 1000);
+    }
+
+    function setFromInputs() {
+      const hours = Math.max(0, toInt(hoursInput.value));
+      const mins = Math.min(59, Math.max(0, toInt(minutesInput.value)));
+      const secs = Math.min(59, Math.max(0, toInt(secondsInput.value)));
+      initialSeconds = hours * 3600 + mins * 60 + secs;
+      remainingSeconds = initialSeconds;
+      finishedBeepPlayed = false;
+      stopTimer();
+      render();
+    }
+
+    setBtn.addEventListener("click", setFromInputs);
+
+    startPauseBtn.addEventListener("click", () => {
+      if (isRunning) {
+        stopTimer();
+      } else {
+        startTimer();
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      remainingSeconds = initialSeconds;
+      finishedBeepPlayed = false;
+      stopTimer();
+      render();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      remainingSeconds = initialSeconds;
+      finishedBeepPlayed = false;
+      stopTimer();
+      startTimer();
+    });
+
+    minus10Btn.addEventListener("click", () => {
+      remainingSeconds = Math.max(0, remainingSeconds - 10);
+      if (remainingSeconds === 0) {
+        stopTimer();
+      }
+      render();
+    });
+
+    plus10Btn.addEventListener("click", () => {
+      remainingSeconds += 10;
+      render();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        startPauseBtn.click();
+      }
+      if (event.code === "KeyR") {
+        event.preventDefault();
+        resetBtn.click();
+      }
+    });
+
+    if (params.get("autostart") === "1") {
+      startTimer();
+    } else {
+      render();
+    }
+  </script>
+</body>
+</html>
